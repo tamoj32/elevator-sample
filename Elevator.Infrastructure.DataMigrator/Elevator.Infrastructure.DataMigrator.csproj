@@ -1,0 +1,92 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{FFB6E3FD-D36E-4057-B981-2388B995E279}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Elevator.Infrastructure.DataMigrator</RootNamespace>
+    <AssemblyName>Elevator.Infrastructure.DataMigrator</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="ECM7.Migrator.Framework">
+      <HintPath>..\Elevator\packages\ECM7Migrator.2.8.0.0\lib\net40\ECM7.Migrator.Framework.dll</HintPath>
+    </Reference>
+    <Reference Include="NLog">
+      <HintPath>..\Elevator\packages\NLog.2.0.1.2\lib\net45\NLog.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Migrations\001_CreateElevators.cs" />
+    <Compile Include="Migrations\002_CreateFloors.cs" />
+    <Compile Include="Migrations\003_PrepopulatedData.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <ClassLibraryOutputDirectory>bin\$(Configuration)</ClassLibraryOutputDirectory>
+    <MigratorTasksPath>$(MSBuildProjectDirectory)\..\elevator\packages\ECM7Migrator.2.8.0.0\tools</MigratorTasksPath>
+    <MigrationsProject>$(MSBuildProjectDirectory)\Elevator.Infrastructure.DataMigrator.csproj</MigrationsProject>
+  </PropertyGroup>
+  <Import Project="$(MigratorTasksPath)\Migrator.Targets" />
+  <Target Name="Build-Migrations">
+    <MSBuild Projects="$(MigrationsProject)" Targets="Build">
+      <Output TaskParameter="TargetOutputs" ItemName="MigrationAssemblies" />
+    </MSBuild>
+    <Message Text="Built: @(MigrationAssemblies)" />
+  </Target>
+  <Target Name="GetConnectionString">
+    <XmlPeek XmlInputPath="$(MSBuildProjectDirectory)\App.config" Query="/configuration/connectionStrings/add[@name='DefaultConnection']/@connectionString" Condition=" '$(MigratorConnectionString)' == '' ">
+      <Output TaskParameter="Result" PropertyName="MigratorConnectionString" />
+    </XmlPeek>
+    <Message Text="Connection String: $(MigratorConnectionString)" />
+  </Target>
+  <Target Name="Migrate" DependsOnTargets="Build-Migrations;GetConnectionString">
+    <Message Text="Migrating: @(MigrationAssemblies)" />
+    <CreateProperty Value="-1" Condition="'$(SchemaVersion)'==''">
+      <Output TaskParameter="Value" PropertyName="SchemaVersion" />
+    </CreateProperty>
+    <Migrate Provider="SqlServer" Connectionstring="$(MigratorConnectionString)" AssemblyFile="@(MigrationAssemblies)" To="$(SchemaVersion)" />
+  </Target>
+</Project>
